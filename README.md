@@ -1,1 +1,1 @@
-Minesweeper game made by iGraphics 
+Minesweeper game made using iGraphics
