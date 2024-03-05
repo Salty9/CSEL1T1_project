@@ -1,7 +1,8 @@
 # include "iGraphics.h"
 # include <stdlib.h>
 # include <time.h>
- 
+#include <sys/time.h>
+
 int window_height = 790, window_width = 1440;
 
 int grid_initialized = 0;
@@ -10,7 +11,7 @@ int rows = 10, cols = 15, uncovered_count = 0; // 10, 15 before
 int mine_count = 20, page = 0, marked_counter = 0;
 int life_height = 55+40; // image + offset
 
-int max_lives = 1;
+int max_lives = 9;
 int lives = max_lives; 
 int loss_music = 0;
 
@@ -33,6 +34,8 @@ struct Effect{
 };
 
 Effect effects[] = {Effect("gah_sound.wav", "gah.bmp", 1.3), Effect("explosion_3.wav", "explosion.bmp", 2.5)};
+
+Effect noice = Effect("noice.wav", "noice.bmp", 2);
 
 struct Cell
 {
@@ -68,6 +71,15 @@ struct Cell
 					char s[] = "0";
 					s[0] += clue;
 					iText(left_x + (size - padding - text_offset)/2.0, left_y + (size - padding - text_offset)/2.0, s, GLUT_BITMAP_HELVETICA_18);
+				}
+
+				if(sound_started){
+					PlaySound(TEXT(noice.sound_path), NULL, SND_ASYNC);
+					sound_start_time = time(NULL);
+					sound_started = 0;
+				}
+				if(sound_start_time != 0){
+					if(time(NULL) - sound_start_time <= noice.time) iShowBMP(window_width - 510, window_height/4, noice.image_path);
 				}
 			}
 		}else{
@@ -228,14 +240,15 @@ void board_dimensions(int p){
 	if(p == 5){
 		rows = 9; cols = 9; mine_count = 10; size = 50; max_lives = 3; 
 	}else if(p == 6){
-		rows = 16, cols = 16, mine_count = 40, size = 40; max_lives = 5;
+		rows = 16, cols = 16, mine_count = 40, size = 40; max_lives = 4;
 	}else if(p == 7){
-		rows = 16; cols = 30; mine_count = 99; size = 30; max_lives = 9;
+		rows = 16; cols = 30; mine_count = 99; size = 30; max_lives = 5;
 	}
 	lives = max_lives;
 	start_x = (window_width - cols*size - 510)/2.0;
 	start_y = (window_height - rows*size - life_height)/2.0;
 	uncovered_count = 0;
+
 }
 
 bool win_check(){
@@ -259,18 +272,26 @@ void event_handler(){
 			return;
 		}
 	}
-
 }
+
+float timedifference_msec(struct timeval t0, struct timeval t1)
+{
+    return (t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f;
+}
+
+int frame_id = 0;
+struct timeval cur_time;
+int win_started = 0;
 
 
 void iDraw() {
 
 	//place your drawing codes here
 	iClear();
-	event_handler();
 	if(page == 0){
 		iShowBMP(0, 0, "homepage.bmp");
 	}else if(page == 1){
+		event_handler();
 		iSetColor(200, 20, 0);
 		draw_grid();
 		side_stuff();
@@ -283,7 +304,25 @@ void iDraw() {
 			PlaySound(TEXT("bites_dust.wav"), 0, SND_LOOP | SND_ASYNC);
 		}
 	}else if(page == 3){
+		if(!win_started){
+			gettimeofday(&cur_time, 0);
+			win_started = 1;
+			PlaySound(TEXT("win_sound.wav"), 0, SND_LOOP | SND_ASYNC);
+		}
 		iShowBMP(0, 0, "win_page.bmp");
+			char frame[50];
+		sprintf(frame, "win_animation/frame_%02d_delay-0.1s.bmp", frame_id);
+
+		// struct timeval here;
+		// gettimeofday(&here, 0);
+		// if(timedifference_msec(cur_time, here) <= 1000){ // 100 mili seconds
+			iShowBMP((window_width - 640)/2.0, (window_height - 480)/2.0, frame);
+			Sleep(50);
+		// }else{
+			// gettimeofday(&cur_time, 0);
+			frame_id = (frame_id + 1);
+			if(frame_id == 12) frame_id = 0;
+		// }
 	}else if(page == 4){
 	
 		iShowBMP(0, 0, "levels.bmp");
@@ -307,7 +346,7 @@ void iMouse(int button, int state, int mx, int my) {
 	printf("%d %d\n", mx, my);
 
 	if(page == 0){
-		if(mx >= 1093 && mx <= 1322 && my >= 489 && my <= 538){
+		if(mx >= 1093 && mx <= 1322 && my >= 489 && my <= 538 && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 			page = 4; return;
 		}else if(mx >= 1036 && mx <= 1371 && my >= 370 && my <= 421){
 			page = 8; return; // instruction page
@@ -317,7 +356,7 @@ void iMouse(int button, int state, int mx, int my) {
 	}else if((page == 4 || page == 5 || page == 6 || page == 7)  && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 		if(mx >= 163 && mx <= 429 && my >= 378 && my <= 620){
 			page = 5;
-		}else if(mx >= 421 && mx <= 829 && my >= 376 && my <= 620){
+		}else if(mx >= 544 && mx <= 891 && my >= 378 && my <= 616){
 			page = 6;
 		}else if(mx >= 1015 && mx <= 1275 && my >= 377 && my <= 621){
 			page = 7;
@@ -331,10 +370,11 @@ void iMouse(int button, int state, int mx, int my) {
 
 		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 
-			if(0 <= i && i < rows && 0 <= j && j < cols){	
+			if(0 <= i && i < rows && 0 <= j && j < cols && !cells[i][j].marker){	
 				if(cells[i][j].clue == 0 && !cells[i][j].mine) {
 					clear_zeros(i, j);
 					clear_around_zeros();
+					cells[i][j].sound_started = 1;
 				}
 				cells[i][j].uncovered = 1; // i = y aixs, j is x axis
 			}
@@ -347,12 +387,15 @@ void iMouse(int button, int state, int mx, int my) {
 				else marked_counter--;
 			}
 		}
-	}else if(page == 2){
+	}else if((page == 2 || page == 3) && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN ){
 		if(mx >= 1243 && mx <= 1401 && my >= 37 && my <= 156){
 			PlaySound(NULL, 0, 0);
 			page = 0;
 			grid_initialized = 0;
 			loss_music = 0;
+			win_started = 0;
+			uncovered_count = 0;
+			marked_counter = 0;
 		}
 	}else if(page == 8){
 		if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
