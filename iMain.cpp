@@ -15,7 +15,7 @@ int max_lives = 9;
 int lives = max_lives; 
 int loss_music = 0;
 
-
+// "C:\MinGW\bin\gcc.exe" "C:\Users\ALI\Desktop\CSE_PROJECT\iMain.cpp" -o "C:\Users\ALI\Desktop\CSE_PROJECT\iMain" -lopengl32 -lglu32 -lglut32 -lglaux -lstdc++ -lwinmm -w
 //function iDraw() is called again and again by the system.
 
 int di[] = {-1, -1, -1,  0,  0,  1, 1, 1};
