@@ -15,7 +15,7 @@ int max_lives = 9;
 int lives = max_lives; 
 int loss_music = 0;
 
-// "C:\MinGW\bin\gcc.exe" "C:\Users\ALI\Desktop\CSE_PROJECT\iMain.cpp" -o "C:\Users\ALI\Desktop\CSE_PROJECT\iMain" -lopengl32 -lglu32 -lglut32 -lglaux -lstdc++ -lwinmm -w
+
 //function iDraw() is called again and again by the system.
 
 int di[] = {-1, -1, -1,  0,  0,  1, 1, 1};
@@ -99,15 +99,10 @@ struct Pair
 		x = xx;
 		y = yy;
 	}
-
-	void show(){
-		printf("x = %d and y = %d\n", x, y);
-	}
 };
 
 
 Cell cells[50][50];
-bool played[50][50];
 Pair mines[2500];
 
 int compress_x_to_j(double x){
@@ -219,7 +214,6 @@ void side_stuff(){
 
 	char buffer[50];
 	sprintf(buffer, "MINES LEFT : %d", mine_count - marked_counter);
-	
 
 	iText(window_width - 250, window_height - 75, buffer, GLUT_BITMAP_HELVETICA_18);
 
@@ -248,10 +242,10 @@ void board_dimensions(int p){
 	start_x = (window_width - cols*size - 510)/2.0;
 	start_y = (window_height - rows*size - life_height)/2.0;
 	uncovered_count = 0;
-
 }
 
 bool win_check(){
+	if(grid_initialized == 0) return false;
 	int res = 0;
 	for(int i = 0; i < rows; i++){
 		for(int j = 0; j < cols; j++){
@@ -301,7 +295,7 @@ void iDraw() {
 		if(!loss_music){
 			loss_music = 1;
 			PlaySound(NULL, 0, 0); // stops any sound playing before
-			PlaySound(TEXT("bites_dust.wav"), 0, SND_LOOP | SND_ASYNC);
+			PlaySound(TEXT("bites_dust_louder.wav"), 0, SND_LOOP | SND_ASYNC);
 		}
 	}else if(page == 3){
 		if(!win_started){
@@ -324,7 +318,6 @@ void iDraw() {
 			if(frame_id == 12) frame_id = 0;
 		// }
 	}else if(page == 4){
-	
 		iShowBMP(0, 0, "levels.bmp");
 	}else if(page == 5){
 		iShowBMP(0, 0, "levels_beginner.bmp");
