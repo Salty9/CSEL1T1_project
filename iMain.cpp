@@ -6,7 +6,7 @@
 int window_height = 790, window_width = 1440;
 
 int grid_initialized = 0;
-double start_x = 50, start_y = 50, size = 50, padding = 4, text_offset = 10;
+double start_x = 50, start_y = 50, size = 50, padding = 4, text_offset = 10, first_click_done = 0;
 int rows = 10, cols = 15, uncovered_count = 0; // 10, 15 before
 int mine_count = 20, page = 0, marked_counter = 0;
 int life_height = 55+40; // image + offset
@@ -83,6 +83,7 @@ struct Cell
 				}
 			}
 		}else{
+			
 			iFilledRectangle(left_x, left_y, sz, sz);
 
 			if(marker){
@@ -207,7 +208,31 @@ void draw_grid(){
 		for(int j = 0; j < cols; j++){
 			cells[i][j].draw_cell();
 		}
-	}	
+	}
+}
+
+void make_first_safe(int minex, int miney){
+	Pair safe_spots[2500];
+
+	int id = 0;
+	for(int i = 0; i < rows; i++){
+		for(int j = 0; j < cols; j++){
+			if(!cells[i][j].mine) safe_spots[id++] = Pair(i, j);
+		}
+	}
+	int chosen_one = rand() % id;
+	cells[safe_spots[chosen_one].x][safe_spots[chosen_one].y].mine = 1; // add effect
+	cells[safe_spots[chosen_one].x][safe_spots[chosen_one].y].chosen_effect = rand() % 2;
+
+	cells[minex][miney].mine = 0;
+
+	for(int i = 0; i < rows; i++){
+			for(int j = 0; j < cols; j++){
+				if(cells[i][j].mine ) continue;
+
+				cells[i][j].clue = get_clue(i, j);	
+		}
+	}
 }
 
 void side_stuff(){
@@ -228,6 +253,11 @@ void side_stuff(){
 		life_x_offset += life_width + life_spacing;
 	}
 
+	if(!first_click_done && page == 1){
+		iText(window_width - 500, window_height-400, "FIRST CLICK IS ALWAYS SAFE", GLUT_BITMAP_TIMES_ROMAN_24);
+		iText(window_width - 500, window_height-500, "RIGHT CLICK TO MARK CELLS", GLUT_BITMAP_TIMES_ROMAN_24);
+	}
+
 }
 
 void board_dimensions(int p){
@@ -242,6 +272,8 @@ void board_dimensions(int p){
 	start_x = (window_width - cols*size - 510)/2.0;
 	start_y = (window_height - rows*size - life_height)/2.0;
 	uncovered_count = 0;
+
+	// mine_count = rows*cols - 1; test first click safe 
 }
 
 bool win_check(){
@@ -363,13 +395,17 @@ void iMouse(int button, int state, int mx, int my) {
 
 		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 
-			if(0 <= i && i < rows && 0 <= j && j < cols && !cells[i][j].marker){	
+			if(0 <= i && i < rows && 0 <= j && j < cols && !cells[i][j].marker){
+				if(cells[i][j].mine && !first_click_done){
+					make_first_safe(i, j);
+				}	
 				if(cells[i][j].clue == 0 && !cells[i][j].mine) {
 					clear_zeros(i, j);
 					clear_around_zeros();
 					cells[i][j].sound_started = 1;
 				}
 				cells[i][j].uncovered = 1; // i = y aixs, j is x axis
+				first_click_done = 1;
 			}
 		}
 		if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
@@ -389,6 +425,7 @@ void iMouse(int button, int state, int mx, int my) {
 			win_started = 0;
 			uncovered_count = 0;
 			marked_counter = 0;
+			first_click_done = 0;
 		}
 	}else if(page == 8){
 		if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
